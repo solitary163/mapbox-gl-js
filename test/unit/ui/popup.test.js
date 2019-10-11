@@ -1,10 +1,10 @@
-import { test } from 'mapbox-gl-js-test';
+import {test} from '../../util/test';
 import window from '../../../src/util/window';
-import { createMap as globalCreateMap } from '../../util';
+import {createMap as globalCreateMap} from '../../util';
 import Popup from '../../../src/ui/popup';
 import LngLat from '../../../src/geo/lng_lat';
 import Point from '@mapbox/point-geometry';
-import { click as simulateClick } from 'mapbox-gl-js-test/simulate_interaction';
+import simulate from '../../util/simulate_interaction';
 
 const containerWidth = 512;
 const containerHeight = 512;
@@ -14,7 +14,7 @@ function createMap(t, options) {
     const container = window.document.createElement('div');
     Object.defineProperty(container, 'clientWidth', {value: options.width || containerWidth});
     Object.defineProperty(container, 'clientHeight', {value: options.height || containerHeight});
-    return globalCreateMap(t, { container });
+    return globalCreateMap(t, {container});
 }
 
 test('Popup#getElement returns a .mapboxgl-popup element', (t) => {
@@ -48,7 +48,7 @@ test('Popup closes on map click events by default', (t) => {
         .setLngLat([0, 0])
         .addTo(map);
 
-    simulateClick(map.getCanvas());
+    simulate.click(map.getCanvas());
 
     t.ok(!popup.isOpen());
     t.end();
@@ -61,7 +61,7 @@ test('Popup does not close on map click events when the closeOnClick option is f
         .setLngLat([0, 0])
         .addTo(map);
 
-    simulateClick(map.getCanvas());
+    simulate.click(map.getCanvas());
 
     t.ok(popup.isOpen());
     t.end();
@@ -74,7 +74,7 @@ test('Popup closes on close button click events', (t) => {
         .setLngLat([0, 0])
         .addTo(map);
 
-    simulateClick(popup.getElement().querySelector('.mapboxgl-popup-close-button'));
+    simulate.click(map.getContainer().querySelector('.mapboxgl-popup-close-button'));
 
     t.ok(!popup.isOpen());
     t.end();
@@ -106,7 +106,6 @@ test('Popup fires close event when removed', (t) => {
     t.ok(onClose.called);
     t.end();
 });
-
 
 test('Popup fires open event when added', (t) => {
     const map = createMap(t);
@@ -397,7 +396,7 @@ test('Popup anchors as specified by the anchor option', (t) => {
 test('Popup automatically anchors to top if its bottom offset would push it off-screen', (t) => {
     const map = createMap(t);
     const point = new Point(containerWidth / 2, containerHeight / 2);
-    const options = { offset: {
+    const options = {offset: {
         'bottom': [0, -25],
         'top': [0, 0]
     }};
@@ -506,6 +505,90 @@ test('Popup adds classes from className option', (t) => {
     const popupContainer = popup.getElement();
     t.ok(popupContainer.classList.contains('some'));
     t.ok(popupContainer.classList.contains('classes'));
+    t.end();
+});
+
+test('Cursor-tracked popup disappears on mouseout', (t) => {
+    const map = createMap(t);
+
+    const popup = new Popup()
+        .setText("Test")
+        .trackPointer()
+        .addTo(map);
+
+    t.equal(popup._trackPointer, true);
+    t.end();
+});
+
+test('Pointer-tracked popup is tagged with right class', (t) => {
+    const map = createMap(t);
+    const popup = new Popup()
+        .setText("Test")
+        .trackPointer()
+        .addTo(map);
+
+    t.equal(popup._container.classList.value.includes('mapboxgl-popup-track-pointer'), true);
+    t.end();
+});
+
+test('Pointer-tracked popup with content set later is tagged with right class ', (t) => {
+    const map = createMap(t);
+    const popup = new Popup()
+        .trackPointer()
+        .addTo(map);
+
+    popup.setText("Test");
+
+    t.equal(popup._container.classList.value.includes('mapboxgl-popup-track-pointer'), true);
+    t.end();
+});
+
+test('Pointer-tracked popup that is set afterwards is tagged with right class ', (t) => {
+    const map = createMap(t);
+    const popup = new Popup()
+        .addTo(map);
+
+    popup.setText("Test");
+    popup.trackPointer();
+
+    t.equal(popup._container.classList.value.includes('mapboxgl-popup-track-pointer'), true);
+    t.end();
+});
+
+test('Pointer-tracked popup can be repositioned with setLngLat', (t) => {
+    const map = createMap(t);
+    const popup = new Popup()
+        .setText("Test")
+        .trackPointer()
+        .setLngLat([0, 0])
+        .addTo(map);
+
+    t.deepEqual(popup._pos, map.project([0, 0]));
+    t.equal(popup._container.classList.value.includes('mapboxgl-popup-track-pointer'), false);
+    t.end();
+});
+
+test('Positioned popup lacks pointer-tracking class', (t) => {
+    const map = createMap(t);
+    const popup = new Popup()
+        .setText("Test")
+        .setLngLat([0, 0])
+        .addTo(map);
+
+    t.equal(popup._container.classList.value.includes('mapboxgl-popup-track-pointer'), false);
+    t.end();
+});
+
+test('Positioned popup can be set to track pointer', (t) => {
+    const map = createMap(t);
+    const popup = new Popup()
+        .setText("Test")
+        .setLngLat([0, 0])
+        .trackPointer()
+        .addTo(map);
+
+    simulate.mousemove(map.getCanvas(), {screenX:0, screenY:0});
+    t.deepEqual(popup._pos, {x:0, y:0});
     t.end();
 });
 
